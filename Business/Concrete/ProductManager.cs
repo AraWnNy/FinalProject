@@ -5,32 +5,72 @@ using System.Text;
 using Business.Abstract;
 using DataAccess.Abstract;
 using Entities.Concrete;
+using Entities.DTOs;
+using Core.Utilities.Results;
+using Business.Constants;
+using FluentValidation;
+using Business.ValidationRules.FluentValidation;
+using Core.CrossCuttingConcerns.Validation;
+using Core.Aspects.Autofac.Validation;
 
 namespace Business.Concrete
 {
     public class ProductManager : IProductService
     {
         private IProductDal _productDal;
+
         public ProductManager(IProductDal productDal)
         {
             _productDal = productDal;
         }
 
-        public List<Product> GetAll()
+        [ValidationAspect(typeof(ProductValidator))]
+        public IResult Add(Product product)
+        {
+            //validation(doğrulama)
+            _productDal.Add(product);
+
+            return new SuccessResult(Messages.ProductAddedMessage);
+        }
+
+        public IDataResult<List<Product>> GetAll()
         {
             //İş Kodları - If yapıları olur genellikle
             //Örneğin yetkisi varsa
-            return _productDal.GetAll();
+            if (DateTime.Now.Hour == 19)
+            {
+                return new ErrorDataResult<List<Product>>(Messages.MaintenanceTime);
+            }
+
+            return new SuccessDataResult<List<Product>>(_productDal.GetAll(), Messages.ProductsListed);
         }
 
-        public List<Product> GetAllByCategoryID(int id)
+        public IDataResult<List<Product>> GetAllByCategoryID(int id)
         {
-            return _productDal.GetAll(p=>p.CategoryId == id).ToList();
+            try
+            {
+                return new SuccessDataResult<List<Product>>(_productDal.GetAll(p => p.CategoryId == id).ToList(), Messages.ProductGettedByCategory);
+            }
+            catch (Exception)
+            {
+
+                return new ErrorDataResult<List<Product>>(_productDal.GetAll(p => p.CategoryId == id).ToList(), Messages.ProductCantGettedByCategory);
+            }
         }
 
-        public List<Product> GetByUnitPrice(decimal min, decimal max)
+        public IDataResult<Product> GetById(int productId)
         {
-            return _productDal.GetAll(p=>p.UnitPrice >= min && p.UnitPrice <= max);
+            return new SuccessDataResult<Product>(_productDal.Get(p => p.ProductId == productId));
+        }
+
+        public IDataResult<List<Product>> GetByUnitPrice(decimal min, decimal max)
+        {
+            return new SuccessDataResult<List<Product>>(_productDal.GetAll(p => p.UnitPrice >= min && p.UnitPrice <= max));
+        }
+
+        public IDataResult<List<ProductDetailDto>> GetProductsDetails()
+        {
+            return new SuccessDataResult<List<ProductDetailDto>>(_productDal.GetProductsDetails());
         }
     }
 }
