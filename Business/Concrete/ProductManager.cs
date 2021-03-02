@@ -12,25 +12,39 @@ using FluentValidation;
 using Business.ValidationRules.FluentValidation;
 using Core.CrossCuttingConcerns.Validation;
 using Core.Aspects.Autofac.Validation;
+using Business.CCS;
+using Core.Utilities.Business;
 
 namespace Business.Concrete
 {
     public class ProductManager : IProductService
     {
         private IProductDal _productDal;
+        private ICategoryService _categoryService;
 
-        public ProductManager(IProductDal productDal)
+        public ProductManager(IProductDal productDal, ICategoryService categoryService)
         {
+            //Bir entitymanager kendi data access layer harici başka bir entitinin data accessini layerini injection edemez.
             _productDal = productDal;
+            _categoryService = categoryService;
         }
 
         [ValidationAspect(typeof(ProductValidator))]
         public IResult Add(Product product)
         {
             //validation(doğrulama)
-            _productDal.Add(product);
+            IResult result = BusinessRules.Run(
+                CheckIfProductCountOfCategoryCorrect(product.CategoryId),
+                CheckIfProductNameExists(product.ProductName),
+                CheckIfCategoryLimitExceeded());
 
+            if (result != null)
+            {
+                return result;
+            }
+            _productDal.Add(product);
             return new SuccessResult(Messages.ProductAddedMessage);
+
         }
 
         public IDataResult<List<Product>> GetAll()
@@ -71,6 +85,52 @@ namespace Business.Concrete
         public IDataResult<List<ProductDetailDto>> GetProductsDetails()
         {
             return new SuccessDataResult<List<ProductDetailDto>>(_productDal.GetProductsDetails());
+        }
+
+        [ValidationAspect(typeof(ProductValidator))]
+        public IResult Update(Product product)
+        {
+
+            var result = _productDal.GetAll(p => p.CategoryId == product.CategoryId).Count;
+            if (result <= 9)
+            {
+
+                return new ErrorResult();
+
+            }
+            _productDal.Update(product);
+            return new SuccessResult(Messages.ProductAddedMessage);
+
+        }
+
+        private IResult CheckIfProductCountOfCategoryCorrect(int categoryId)
+        {
+            var result = _productDal.GetAll(p => p.CategoryId == categoryId).Count;
+            if (result <= 9)
+            {
+                return new ErrorResult(Messages.ProductCountOfCategoryError);
+            }
+            return new SuccessResult();
+        }
+
+        private IResult CheckIfProductNameExists(string productName)
+        {
+            var result = _productDal.GetAll(p => p.ProductName == productName).Any();
+            if (result)
+            {
+                return new ErrorResult(Messages.ProductNameExists);
+            }
+            return new SuccessResult();
+        }
+        
+        private IResult CheckIfCategoryLimitExceeded()
+        {
+            var result = _categoryService.GetAll().Data.Count;
+            if (result >= 15)
+            {
+                return new ErrorResult(Messages.CategoryLimitError);
+            }
+            return new SuccessResult();
         }
     }
 }

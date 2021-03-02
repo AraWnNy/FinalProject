@@ -13,5 +13,8 @@ namespace Business.Constants
         public static string ProductsListed = "Ürünler listelendi";
         public static string ProductGettedByCategory = "Ürünler seçilen kategoriye göre listelendi";
         public static string ProductCantGettedByCategory = "Ürünler seçilen kategoriye göre listelenemedi";
+        public static string ProductCountOfCategoryError = "Bir kategoride en fazla 10 adet ürün olabilir.";
+        public static string ProductNameExists = "Girdiğiniz ürün ismi önceden alınmış";
+        public static string CategoryLimitError = "Kategori limiti aşıldı";
     }
 }
