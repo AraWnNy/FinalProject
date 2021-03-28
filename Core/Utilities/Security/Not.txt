@@ -1,0 +1,6 @@
+﻿Hashing, Encryption => Verilerin okunmamasını sağlamak
+Veriyi açık olarak tutmak güvenlik zafiyetidir.
+Hash dataları geri döndürülemez.
+Hashingde verinin karşılığı yoktur.
+Encrpytion ise geri döndürülebilir.
+Salting => Kullanıcıdan alınan değeri sistem içerisinde biraz daha güçlendirme
