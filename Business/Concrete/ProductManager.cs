@@ -14,6 +14,10 @@ using Core.CrossCuttingConcerns.Validation;
 using Core.Aspects.Autofac.Validation;
 using Business.CCS;
 using Core.Utilities.Business;
+using Business.BusinessAspects.Autofac;
+using Core.Aspects.Autofac.Caching;
+using Core.Aspects.Autofac.Transaction;
+using Core.Aspects.Autofac.Performance;
 
 namespace Business.Concrete
 {
@@ -29,9 +33,10 @@ namespace Business.Concrete
             _categoryService = categoryService;
         }
 
-        //                   Claim   Claim
-        //[SecuredOperation("admin,editor")]
+        //                 Claim   Claim
+        [SecuredOperation("product.add")]
         [ValidationAspect(typeof(ProductValidator))]
+        [CacheRemoveAspect("IProductService.Get")]
         public IResult Add(Product product)
         {
             //validation(doğrulama)
@@ -49,11 +54,12 @@ namespace Business.Concrete
 
         }
 
+        [CacheAspect] //key, value pair
         public IDataResult<List<Product>> GetAll()
         {
             //İş Kodları - If yapıları olur genellikle
             //Örneğin yetkisi varsa
-            if (DateTime.Now.Hour == 19)
+            if (DateTime.Now.Hour == 10)
             {
                 return new ErrorDataResult<List<Product>>(Messages.MaintenanceTime);
             }
@@ -74,6 +80,7 @@ namespace Business.Concrete
             }
         }
 
+        [CacheAspect]
         public IDataResult<Product> GetById(int productId)
         {
             return new SuccessDataResult<Product>(_productDal.Get(p => p.ProductId == productId));
@@ -90,6 +97,8 @@ namespace Business.Concrete
         }
 
         [ValidationAspect(typeof(ProductValidator))]
+        [CacheRemoveAspect("IProductService.Get")]
+        [PerformanceAspect(5)]
         public IResult Update(Product product)
         {
 
@@ -132,6 +141,20 @@ namespace Business.Concrete
             {
                 return new ErrorResult(Messages.CategoryLimitError);
             }
+            return new SuccessResult();
+        }
+
+        [TransactionScopeAspect]
+        public IResult AddTransactionalTest(Product product)
+        {
+            Add(product);
+            if (product.UnitPrice < 10)
+            {
+                throw new Exception("");
+            }
+            
+            Add(product);
+
             return new SuccessResult();
         }
     }
